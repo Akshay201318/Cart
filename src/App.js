@@ -1,3 +1,4 @@
+// importing all the nessasery files or libraries
 import React from 'react';
 import Cart from './Cart';
 import Navbar from './Navbar';
@@ -8,17 +9,21 @@ class App extends React.Component {
   constructor(){
     super();
     this.state={
-    product:[]
+    product:[],
+    loading: true
   }
+  this.db=firebase
+  .firestore()
 }
+
+
+// fatching data from the firebase
 
 componentDidMount(){
 
-  firebase
-  .firestore()
+  this.db
   .collection('products')
-  .get()
-  .then((snapshot) =>{
+  .onSnapshot((snapshot) =>{
 
     const products=snapshot.docs.map((doc) =>{
 
@@ -28,38 +33,63 @@ componentDidMount(){
     });
 
     this.setState({
-      product: products
+      product: products,
+      loading:false
     })
   });
 }
 
+//increasing the quantity of a particular product in cart
 increaseQty = (produc) =>{
     const {product}=this.state;
     const index = product.indexOf(produc);
-    product[index].Qty+=1;
+    
+    const docRef= this.db.collection('products').doc(product[index].id);
 
-    this.setState({
-        product
+    docRef
+    .update({
+      Qty:product[index].Qty +1
+    })
+    .then(() =>{
+
+    })
+    .catch((err) =>{
+      console.log("error", err);
     });
 
 }
+
+//decreasing the quantity of a particular product in cart
 decreaseQty = (produc) =>{
     const {product}=this.state;
     const index = product.indexOf(produc);
     if(product[index].Qty>0)
-    product[index].Qty-=1;
+    {
+    const docRef= this.db.collection('products').doc(product[index].id);
 
-    this.setState({
-        product
+    docRef
+    .update({
+      Qty:product[index].Qty -1
+    })
+    .then(() =>{
+
+    })
+    .catch((err) =>{
+      console.log("error", err);
     });
+  }
 }
-
+//deleting  a particular product from cart
 deleteProduct = (id) => {
-    const {product}=this.state;
-    const item=product.filter((item) => item.id !==id);
+    const docRef= this.db.collection('products').doc(id);
 
-    this.setState({
-        product: item
+    docRef
+    .delete()
+    .then(() =>{
+
+    })
+    .catch((err) =>{
+      console.log("error", err);
     });
 }
 
@@ -85,15 +115,37 @@ getCartTotal = () =>{
   return total;
 
 }
+// adding a product to the firebase
+
+addProduct =()=>{
+
+  this.db
+  .collection('products')
+  .add({
+    price:39999,
+    Qty:7,
+    img:"",
+    title:"Laptop"
+  })
+  .then((docRef) =>{
+
+  })
+  .catch((err) =>{
+    console.log("error", err);
+  });
+}
+
+// rendering the react app
 
   render(){
 
-    const {product}=this.state;
+    const {product, loading}=this.state;
   return (
     <div className="App">
        <Navbar
          count={this.getCartCount()}
        />
+       <button onClick={this.addProduct} style={{padding: 20, fontSize:20}}>Add a Poduct</button>
        <Cart
        products={product} 
        key={product.id}
@@ -101,6 +153,7 @@ getCartTotal = () =>{
        onDecrease={this.decreaseQty}
        onDelete={this.deleteProduct} 
        />
+       {loading && <h1>Loading Products .....</h1>}
        <div><h3 style={{padding: 20, fontSize:20}}>Total : {this.getCartTotal()}</h3></div>
     </div>
   );
